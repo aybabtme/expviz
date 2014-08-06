@@ -140,6 +140,8 @@ func fromReader(r io.Reader) (*snapshot, error) {
 
 	snap := &snapshot{
 		Time:       time.Now(),
+		Numbers:    make(map[string]float64),
+		Strings:    make(map[string]string),
 		NumberMaps: make(map[string]map[string]float64),
 		StringMaps: make(map[string]map[string]string),
 	}
@@ -162,23 +164,33 @@ func fromReader(r io.Reader) (*snapshot, error) {
 			continue
 		}
 
-		// switch val := v.(type) {
-		// case float64:
-		// 	snap.Numbers[k] = val
-		// case string:
-		// 	snap.Strings[k] = val
-		// case map[string]interface{}:
-		//           for subk, subv := range val {
-		// 		switch subval := subv.(type) {
-		// 		case float64:
-		// 			snap.NumberMaps[k][subk] = subval
-		// 		case string:
-		// 			snap.StringMaps[k][subk] = subval
-		// 		}
-		// 	}
-		// default:
-		// 	log.Fatalf("not a supported type (%T): %q:%#v", v, k, v)
-		// }
+		switch val := v.(type) {
+		case float64:
+			snap.Numbers[k] = val
+		case string:
+			snap.Strings[k] = val
+		case map[string]interface{}:
+			for subk, subv := range val {
+				switch subval := subv.(type) {
+				case float64:
+					m, ok := snap.NumberMaps[k]
+					if !ok {
+						m = make(map[string]float64)
+						snap.NumberMaps[k] = m
+					}
+					m[subk] = subval
+				case string:
+					m, ok := snap.StringMaps[k]
+					if !ok {
+						m = make(map[string]string)
+						snap.StringMaps[k] = m
+					}
+					m[subk] = subval
+				}
+			}
+		default:
+			log.Fatalf("not a supported type (%T): %q:%#v", v, k, v)
+		}
 	}
 	return snap, nil
 }
